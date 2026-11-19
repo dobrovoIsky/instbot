@@ -425,11 +425,20 @@ async def handle_card_generate(callback: CallbackQuery):
     await callback.answer("⏳ Генерирую карточку...")
 
     result = user_results[uid]
-    card_buf = generate_stats_card(result)
+    
+    # Get user username and bot username for personalization & branding
+    user_name = callback.from_user.username or callback.from_user.first_name or "Instagram"
+    try:
+        bot_info = await bot.get_me()
+        bot_uname = f"@{bot_info.username}" if bot_info.username else "@InstagramAnalyzerBot"
+    except Exception:
+        bot_uname = "@InstagramAnalyzerBot"
+
+    card_buf = generate_stats_card(result, username=user_name, bot_username=bot_uname)
     photo = BufferedInputFile(card_buf.read(), filename="instagram_stats.png")
     await callback.message.answer_photo(
         photo,
-        caption="🖼 <b>Твоя статистика Instagram</b>\nПоделись ею с друзьями или в сторис!",
+        caption="🖼 <b>Твоя статистика Instagram</b>\nПоделись ею с друзьями или выложи в сторис!",
     )
 
 
