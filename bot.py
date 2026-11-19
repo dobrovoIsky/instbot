@@ -550,11 +550,37 @@ def _format_stats_text(stats: dict) -> str:
     )
 
 
-# ─── Web server for Render health checks ─────────────────────────────────────
+# ─── Web server & Keep-Alive ping for Render ─────────────────────────────────
 
 async def health_check_handler(request):
     """Health check endpoint for Render Web Service."""
     return web.Response(text="Instagram Analyzer Bot is running OK!\n")
+
+
+async def keep_alive_ping():
+    """Periodically ping self to prevent Render Free tier from sleeping."""
+    # Wait 60s after startup
+    await asyncio.sleep(60)
+
+    # Render automatically injects RENDER_EXTERNAL_URL (e.g. https://your-app.onrender.com)
+    url = os.getenv("RENDER_EXTERNAL_URL") or os.getenv("PING_URL")
+    if not url:
+        logger.info("Keep-alive ping: RENDER_EXTERNAL_URL not set (not needed locally).")
+        return
+
+    target = f"{url.rstrip('/')}/health"
+    logger.info("Keep-alive self-ping activated: %s (interval: 10 min)", target)
+
+    import aiohttp
+    async with aiohttp.ClientSession() as session:
+        while True:
+            try:
+                async with session.get(target, timeout=20) as resp:
+                    logger.info("Keep-alive ping sent to %s [status: %s]", target, resp.status)
+            except Exception as e:
+                logger.warning("Keep-alive ping failed: %s", e)
+            # Render sleeps after 15 min of inactivity; ping every 10 min (600s)
+            await asyncio.sleep(600)
 
 
 # ─── Main ────────────────────────────────────────────────────────────────────
@@ -578,6 +604,9 @@ async def main():
             logger.info("Health-check web server started on port %s", port)
         except Exception as e:
             logger.warning("Could not start web health-check server: %s", e)
+
+    # Launch background keep-alive self-ping
+    asyncio.create_task(keep_alive_ping())
 
     await dp.start_polling(bot)
 
