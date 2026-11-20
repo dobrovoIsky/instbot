@@ -112,8 +112,17 @@ async def get_admin_stats():
         )
         active_week = (await cursor.fetchone())[0]
 
+        cursor = await db.execute("""
+            SELECT user_id, username, first_name, analysis_count
+            FROM users
+            ORDER BY last_seen DESC
+            LIMIT 15
+        """)
+        recent_users = await cursor.fetchall()
+
         return {
             "total_users": total_users,
             "total_analyses": total_analyses,
             "active_last_7_days": active_week,
+            "recent_users": recent_users,
         }

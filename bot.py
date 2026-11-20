@@ -121,12 +121,22 @@ async def cmd_admin(message: Message):
     if message.from_user.id != admin_id:
         return
     stats = await get_admin_stats()
-    await message.answer(
-        f"📈 <b>Админ-статистика бота</b>\n\n"
-        f"👥 Всего пользователей: <b>{stats['total_users']}</b>\n"
-        f"📊 Всего анализов: <b>{stats['total_analyses']}</b>\n"
-        f"🟢 Активных за 7 дней: <b>{stats['active_last_7_days']}</b>"
-    )
+    
+    text_lines = [
+        "📈 <b>Админ-статистика бота</b>\n",
+        f"👥 Всего пользователей: <b>{stats['total_users']}</b>",
+        f"📊 Всего анализов: <b>{stats['total_analyses']}</b>",
+        f"🟢 Активных за 7 дней: <b>{stats['active_last_7_days']}</b>\n",
+    ]
+
+    recent = stats.get("recent_users", [])
+    if recent:
+        text_lines.append("👤 <b>Последние пользователи:</b>")
+        for idx, (uid, uname, fname, count) in enumerate(recent, start=1):
+            name_display = f"@{uname}" if uname else (fname or f"ID {uid}")
+            text_lines.append(f"{idx}. {name_display} — анализов: {count}")
+    
+    await message.answer("\n".join(text_lines))
 
 
 # ─── In-memory storage for JSON/HTML individual files ────────────────────────
